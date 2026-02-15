@@ -29,3 +29,4 @@ htmlcov/
 # IDEs (VS Code & PyCharm)
 .vscode/
 .idea/
+*.json

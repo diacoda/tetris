@@ -338,24 +338,41 @@ class TetrisGame:
         return False
     
     def rotate_piece(self):
-        """Attempts to rotate the current piece using SRS wall kicks"""
+        """Attempts to rotate the current piece using SRS wall kicks with visual centering"""
         if self.current_piece.shape_name == 'O':
             return  # O piece doesn't rotate
         
         # Save the old state in case all rotations fail
         old_shape = [block[:] for block in self.current_piece.shape]
         old_rotation_state = self.current_piece.rotation_state
+        old_x = self.current_piece.x
+        old_y = self.current_piece.y
+        
+        # Calculate center of mass before rotation
+        center_x_before = sum(block[0] for block in old_shape) / len(old_shape)
+        center_y_before = sum(block[1] for block in old_shape) / len(old_shape)
         
         # Perform the rotation
         self.current_piece.rotate()
-        new_rotation_state = self.current_piece.rotation_state
         
-        # Get the appropriate wall kick data
+        # Calculate center of mass after rotation
+        center_x_after = sum(block[0] for block in self.current_piece.shape) / len(self.current_piece.shape)
+        center_y_after = sum(block[1] for block in self.current_piece.shape) / len(self.current_piece.shape)
+        
+        # Calculate offset to keep piece visually centered
+        center_offset_x = round(center_x_before - center_x_after)
+        center_offset_y = round(center_y_before - center_y_after)
+        
+        # Apply centering offset
+        self.current_piece.x += center_offset_x
+        self.current_piece.y += center_offset_y
+        
+        # Now try wall kicks if needed (with much simpler kick table since we're already centered)
+        new_rotation_state = self.current_piece.rotation_state
         kick_key = (old_rotation_state, new_rotation_state)
-        if self.current_piece.shape_name == 'I':
-            kick_tests = WALL_KICK_DATA_I.get(kick_key, [(0, 0)])
-        else:
-            kick_tests = WALL_KICK_DATA.get(kick_key, [(0, 0)])
+        
+        # Simplified kicks - just try in place, then ±1 left/right
+        kick_tests = [(0, 0), (-1, 0), (1, 0), (0, -1)]
         
         # Try each wall kick offset
         for offset_x, offset_y in kick_tests:
@@ -365,9 +382,11 @@ class TetrisGame:
                 self.current_piece.y += offset_y
                 return  # Success!
         
-        # All wall kicks failed, revert the rotation
+        # All wall kicks failed, revert everything
         self.current_piece.shape = old_shape
         self.current_piece.rotation_state = old_rotation_state
+        self.current_piece.x = old_x
+        self.current_piece.y = old_y
     
     def lock_piece(self):
         """Locks the current piece into the grid"""
